@@ -10,6 +10,7 @@
 
 //相关函数的声明
 void ConfigureSpi(void);
+void ConfigureSpi2(void);
 void Initspigpio(void);
 void W_Enable_25LC640(void);       //25LC640写使能函数
 void W_Disable_25LC640(void);      //25LC640禁止 写使能函数

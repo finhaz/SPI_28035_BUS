@@ -4,6 +4,7 @@
 #include "Can_message.h"
 
 __interrupt void Ecan0ISR(void);
+__interrupt void SPIISR(void);
 //手动控制标志
 int test_b=0;
 int test_c=0;
@@ -17,7 +18,7 @@ Uint16 Sta_var2=0;
 Uint16 Ret_var4=0;
 Uint16 Sta_var4=0;
 Uint16 ParametI[256];
-
+Uint16 spi_cnt=0;
 
 void main(void)
 {
@@ -67,10 +68,20 @@ void main(void)
     Initspigpio();
 
     ConfigureEcan();
+
+#ifdef SPI_rec
+    ConfigureSpi2();
+#else
     ConfigureSpi();
+#endif
 
     EALLOW;  // This is needed to write to EALLOW protected registers
     PieVectTable.ECAN0INTA = &Ecan0ISR;//R-CAN1  接收后中断函数
+
+#ifdef SPI_rec
+    PieVectTable.SPIRXINTA =&SPIISR;//R-SPI  接收后中断函数
+#endif
+
     EDIS;   // This is needed to disable write to EALLOW protected registers
 
     IER |=M_INT9;// 开CPU中断1~9(必须开放对应的CPU级中断口)
@@ -78,16 +89,24 @@ void main(void)
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1;   // Enable the PIE block
     PieCtrlRegs.PIEIER9.bit.INTx5=1;     //R-CAN0  接收邮箱
 
+#ifdef SPI_rec
+    PieCtrlRegs.PIEIER6.bit.INTx1=1;     // Enable PIE Group 6, INT 1
+#endif
 
     EINT;//开总中断
     ERTM;//使能实时中断（CPU级的）
 
-
+#ifdef SPI_rec
+    for(i=0;i<255;i++)
+        ParametI[i]=0;
+#endif
 
     while(1)
     {
         Checkdata();
         CanSend();
+
+#ifndef SPI_rec
         if(test_b)
         {
             //Write_to_25LC640F(numv,Ret_var1);
@@ -146,6 +165,7 @@ void main(void)
 
             test_c=0;
         }
+#endif
 
     }
 
@@ -167,3 +187,14 @@ __interrupt void Ecan0ISR(void)//R  接收后进入的中断
 
     //EINT;
 }
+
+#ifdef SPI_rec
+__interrupt void SPIISR(void)//R  接收后进入的中断
+{
+    ParametI[spi_cnt]=SpiaRegs.SPIRXBUF&0x00ff;
+    spi_cnt++;
+    if(spi_cnt==250)
+        spi_cnt=0;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
+}
+#endif

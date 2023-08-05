@@ -65,6 +65,49 @@ void ConfigureSpi(void)
 
 }
 
+
+void ConfigureSpi2(void)
+{
+    EALLOW;
+
+
+    // Set reset low before configuration changesSPI复位
+    // Clock polarity (0 == rising, 1 == falling)设置时钟为上升沿
+    // 8-bit character8位字符长度
+    // Disable loop-back
+    SpiaRegs.SPICCR.bit.SPISWRESET = 0;
+    SpiaRegs.SPICCR.bit.CLKPOLARITY = 0;
+    SpiaRegs.SPICCR.bit.SPICHAR = 7;
+    SpiaRegs.SPICCR.bit.SPILBK = 0;
+    //SpiaRegs.SPICCR.all=0x0007;
+
+    // 使能主模式，标准相位// 使能Talk,SPIINT屏蔽
+    // Enable master (0 == slave, 1 == master)
+    // Enable transmission (Talk)
+    // Clock phase (0 == normal, 1 == delayed)
+    // SPI interrupts are disabled
+    SpiaRegs.SPICTL.bit.MASTER_SLAVE = 0;
+    SpiaRegs.SPICTL.bit.TALK = 1;
+    SpiaRegs.SPICTL.bit.CLK_PHASE = 0;
+    SpiaRegs.SPICTL.bit.SPIINTENA = 1;
+    //SpiaRegs.SPICTL.all=0x0006;
+
+    SpiaRegs.SPIBRR=0x3B;     //设置波特率,SPIBRR>=3,LSP/(SPIBRR+1);SPIBRR=0,1,2,LSP/4
+    //SpiaRegs.SPICCR.all=0x0087;  //使SPI退出复位状态//使能自测试模式
+
+    SpiaRegs.SPIPRI.bit.FREE = 1;
+
+    // Release the SPI from reset
+    SpiaRegs.SPICCR.bit.SPISWRESET = 1;
+
+    EDIS;
+
+
+
+}
+
+
+
 void Initspigpio(void)
 {
     EALLOW;
